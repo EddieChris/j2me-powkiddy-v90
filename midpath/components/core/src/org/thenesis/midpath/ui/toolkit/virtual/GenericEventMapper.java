@@ -74,8 +74,16 @@ public class GenericEventMapper implements EventMapper {
 			return Canvas.GAME_C;
 		else if (keyCode == KEY_GAME_D)
 			return Canvas.GAME_D;
-		else if (keyCode == Constants.KEYCODE_SELECT)
+		else if (keyCode == Constants.KEYCODE_SELECT || keyCode == Canvas.KEY_NUM5)
 			return Canvas.FIRE;
+		else if (keyCode == Canvas.KEY_NUM2)
+			return Canvas.UP;
+		else if (keyCode == Canvas.KEY_NUM8)
+			return Canvas.DOWN;
+		else if (keyCode == Canvas.KEY_NUM4)
+			return Canvas.LEFT;
+		else if (keyCode == Canvas.KEY_NUM6)
+			return Canvas.RIGHT;
 		else if (keyCode == Constants.KEYCODE_DOWN)
 			return Canvas.DOWN;
 		else if (keyCode == Constants.KEYCODE_LEFT)
@@ -84,6 +92,10 @@ public class GenericEventMapper implements EventMapper {
 			return Canvas.RIGHT;
 		else if (keyCode == Constants.KEYCODE_UP)
 			return Canvas.UP;
+		else if ((keyCode >= Canvas.KEY_NUM0 && keyCode <= Canvas.KEY_NUM9) ||
+				keyCode == Canvas.KEY_STAR || keyCode == Canvas.KEY_POUND ||
+				keyCode == EventConstants.SOFT_BUTTON1 || keyCode == EventConstants.SOFT_BUTTON2)
+			return 0;
 		else
 			return -1;
 	}

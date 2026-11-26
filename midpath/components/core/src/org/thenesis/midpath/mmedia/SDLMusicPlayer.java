@@ -33,7 +33,11 @@ import sdljava.audio.SDLAudio;
 
 public class SDLMusicPlayer extends SDLPlayer {
 
+    // SDL_mixer has one global music channel; only its owner may resume it.
+    private static SDLMusicPlayer currentMusicPlayer;
+    private static final Object musicLock = new Object();
     private MixMusic music;
+    private boolean mixerOpened;
     private EndOfMediaChecker eomChecker;
     public final static boolean DEBUG = false;
     
@@ -41,22 +45,28 @@ public class SDLMusicPlayer extends SDLPlayer {
     }
     
     protected void doClose() {
-	if (DEBUG) {
-	    System.out.println("doClose()");
-	}
-	try {
-	    SDLMixer.resumeMusic();
-	    SDLMixer.haltMusic();
-	    SDLMixer.freeMusic(music);
-	    SDLMixer.close();
-	} catch (Exception e) {
-	    e.printStackTrace();
-	} finally {
-	    if (eomChecker != null) eomChecker.stop();
-	}
-	if (DEBUG) {
-	    System.out.println("coming out of doClose");
-	}
+        synchronized (musicLock) {
+            try {
+                // Closing an old player must not interrupt another sound.
+                if (currentMusicPlayer == this) {
+                    SDLMixer.haltMusic();
+                    currentMusicPlayer = null;
+                }
+                if (music != null) {
+                    SDLMixer.freeMusic(music);
+                    music = null;
+                }
+                // Match each successful Mix_OpenAudio with exactly one close.
+                if (mixerOpened) {
+                    SDLMixer.close();
+                    mixerOpened = false;
+                }
+            } catch (Exception e) {
+                System.err.println("[J2ME som] Falha ao liberar MIDI: " + e);
+            } finally {
+                if (eomChecker != null) eomChecker.stop();
+            }
+        }
     }
 
     protected void doDeallocate() {
@@ -66,7 +76,7 @@ public class SDLMusicPlayer extends SDLPlayer {
     }
 
     protected Control doGetControl(String type) {
-	System.out.println("doGetControl():" + type);
+        if (DEBUG) System.out.println("doGetControl():" + type);
 	if (type.equals(pkgName + "VolumeControl")) {
 	    return new SDLVolumeControl();
 	}
@@ -98,7 +108,8 @@ public class SDLMusicPlayer extends SDLPlayer {
 	    System.out.println("doRealize()");
 	}
 	try {
-	    SDLMixer.openAudio(22050, SDLAudio.AUDIO_S16SYS, 1, 8192);
+	    SDLMixer.openAudio(22050, SDLAudio.AUDIO_S16SYS, 1, 1024);
+            mixerOpened = true;
 	    // FIXME Remove copy of audio data
 	    ByteArrayOutputStream baos = new ByteArrayOutputStream();
 	    byte[] buffer = new byte[1000];
@@ -153,40 +164,34 @@ public class SDLMusicPlayer extends SDLPlayer {
     }
     
     protected boolean doStart() {
-	if (DEBUG) {
-	    System.out.println("doStart()");
-	}
-	if (SDLMixer.pausedMusic()) {
-	    SDLMixer.resumeMusic();
-	    if (DEBUG) {
-		System.out.println("coming out of doStart():1");
-	    }
-	    return true;
-	}
-
-	try {
-	    SDLMixer.playMusic(music, 0);
-	    
-	    eomChecker = new EndOfMediaChecker();
-	    eomChecker.start();
-	    if (DEBUG) {
-		System.out.println("coming out of doStart():2");
-	    }
-	    return true;
-	} catch (SDLException e) {
-	    e.printStackTrace();
-	    return false;
-	}
+        synchronized (musicLock) {
+            try {
+                if (currentMusicPlayer == this && SDLMixer.pausedMusic()) {
+                    SDLMixer.resumeMusic();
+                    return true;
+                }
+                // A paused channel may belong to a different Sound instance.
+                // Start this player's own music instead of resuming that channel.
+                if (currentMusicPlayer != null && currentMusicPlayer != this && currentMusicPlayer.eomChecker != null)
+                    currentMusicPlayer.eomChecker.stop();
+                SDLMixer.playMusic(music, 0);
+                currentMusicPlayer = this;
+                if (eomChecker != null) eomChecker.stop();
+                eomChecker = new EndOfMediaChecker();
+                eomChecker.start();
+                return true;
+            } catch (SDLException e) {
+                System.err.println("[J2ME som] Falha ao iniciar MIDI: " + e);
+                return false;
+            }
+        }
     }
 
     protected void doStop() throws MediaException {
-	if (DEBUG) {
-	    System.out.println("doStop()");
-	}
-	SDLMixer.pauseMusic();
-	if (DEBUG) {
-	    System.out.println("coming out of doStop()");
-	}
+        synchronized (musicLock) {
+            // A stale player must not pause another player's current sound.
+            if (currentMusicPlayer == this) SDLMixer.pauseMusic();
+        }
     }
 
     class SDLToneControl implements ToneControl {
@@ -215,7 +220,7 @@ public class SDLMusicPlayer extends SDLPlayer {
 	    }
 	    
 	    try {
-		return SDLMixer.volumeMusic(-1);
+                return (SDLMixer.volumeMusic(-1) * 100 + 64) / 128;
 	    } catch (SDLException e) {
 	    }
 	    
@@ -238,8 +243,11 @@ public class SDLMusicPlayer extends SDLPlayer {
 		return level;
 	    }
 
+            if (level < 0) level = 0;
+            if (level > 100) level = 100;
 	    try {
-		return SDLMixer.volumeMusic(level);
+                SDLMixer.volumeMusic((level * 128 + 50) / 100);
+                return level;
 	    } catch (SDLException e) {
 	    }
 	    // Should not occur

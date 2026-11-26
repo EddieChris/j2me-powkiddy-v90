@@ -1,0 +1,116 @@
+BITTBOY J2ME — POWKIDDY V90
+Manual atualizado em 25/11/2026
+
+DESCRIÇÃO
+
+Ambiente para executar jogos Java ME (.jar) no Powkiddy V90 com Miyoo CFW
+1.3.3. Baseado no Bittboy J2ME, utiliza phoneME e MidPath. Alguns jogos podem
+apresentar problemas de gráficos, áudio, controles ou desempenho. Se um jogo
+não funcionar corretamente, experimente outra versão criada para um telefone
+compatível.
+
+CONTROLES
+
+  Y      = 5 (ação/FIRE em muitos jogos)
+  B      = 0
+  X      = *
+  A      = #
+  L1     = 1
+  R1     = 3
+  L2     = 7
+  R2     = 9
+  SELECT = tecla de função esquerda
+  START  = tecla de função direita
+  MENU   = sair do jogo
+
+Nos jogos com perfil 96x65, o direcional envia os números 2, 8, 4 e 6
+(cima, baixo, esquerda e direita). Nos demais perfis, ele envia as setas.
+Para forçar o uso de setas em um jogo 96x65, acrescente [setas] ao nome do
+arquivo JAR.
+
+O funcionamento de L2 e R2 depende do zImage instalado no console: pode ser
+necessária uma versão que habilite esses botões. A função das teclas pode
+variar conforme o jogo.
+
+RESOLUÇÃO DOS JOGOS
+
+A resolução é reconhecida pelo nome do arquivo JAR. Exemplos:
+
+  Meu jogo 96x65.jar
+  Meu jogo 176x220.jar
+  Meu jogo 320x240.jar
+
+O lançador reconhece 96x65, 128x128, 128x160, 176x208, 176x220, 176x221,
+208x208, 220x176, 240x240, 240x320 e 320x240. Use a resolução apropriada
+para a versão do jogo. Renomear o arquivo não altera o conteúdo do JAR nem
+converte um jogo para outra resolução. Sem resolução reconhecida, o padrão é
+176x221.
+
+Jogos 96x65 são ampliados 3x para 288x195 e centralizados na tela do V90.
+O reconhecimento de 320x240 pelo nome está disponível, mas a exibição nessa
+resolução ainda precisa de confirmação no console.
+
+Opcionalmente, crie ao lado do JAR um arquivo com o mesmo nome acrescido de
+.res, por exemplo "Meu jogo.jar.res", contendo apenas 96x65 ou outra das
+resoluções aceitas. Esse arquivo tem prioridade sobre a resolução no nome.
+Remova ou corrija o .res para voltar a escolher a resolução pelo nome do JAR.
+
+SOM E COMPATIBILIDADE
+
+O som depende da instalação e da configuração do CFW. O emulador possui
+suporte experimental a sons Nokia OTT em jogos 96x65. A reprodução e o
+sincronismo podem variar entre jogos; o término de algumas notas ainda precisa
+ser verificado. Alguns jogos Nokia coloridos apresentam gráficos incompletos
+ou travamentos.
+
+INSTALAÇÃO
+
+1. Desligue o V90 e faça backup do cartão de memória.
+2. Copie a pasta completa bittboy-j2me/ para emus/ no cartão.
+3. Copie o atalho bittboy-j2me para gmenu2x/sections/emulators/.
+4. Crie a pasta roms/j2me/ e copie os jogos .jar para ela ou suas subpastas.
+5. Ejete o cartão com segurança, coloque-o no V90 e abra Bittboy J2ME na seção
+   de emuladores para escolher um jogo.
+
+Para atualizar uma instalação existente, faça backup dos arquivos antes de
+substituí-los. Os componentes principais ficam nos seguintes caminhos:
+
+  emus/bittboy-j2me/bin/midpath-midlet_launcher.sh — lançador, seleção de
+  resolução, direcional para 96x65 e registro das execuções.
+
+  emus/bittboy-j2me/dist/microbackend.jar — vídeo e entrada de controles.
+
+  emus/bittboy-j2me/dist/midpath.jar — execução dos jogos e componentes do
+  ambiente Java ME.
+
+  emus/bittboy-j2me/dist/nokia.jar — APIs e sons Nokia.
+
+A correção pontual para linhas desenhadas além da borda, destinada a evitar
+uma exceção observada no Medieval Combat, está em versão experimental e ainda
+precisa ser testada no V90. Uma atualização dos arquivos individuais exige
+que o restante da instalação completa já esteja presente.
+
+REGISTROS E DIAGNÓSTICO
+
+Com o lançador que acumula execuções instalado, os registros ficam em
+emus/bittboy-j2me/bin/:
+
+  j2me_err_log.txt — erros e avisos.
+  j2me_std_log.txt — saída do emulador, vídeo, som e outras informações.
+
+Os dois arquivos acumulam várias execuções. Cada uma é identificada pelo
+caminho do JAR e pela resolução escolhida. Para iniciar uma coleta limpa,
+feche o emulador e apague os dois arquivos antes de testar; eles serão
+recriados. Como crescem com o uso, apague-os periodicamente quando não forem
+mais necessários. Em versões antigas do lançador, os logs podem ser
+sobrescritos ao abrir outro jogo.
+
+No registro padrão, para um jogo 96x65, procure:
+
+  [V90 video] MIDlet=96x65 SDL=320x240
+  [V90 video] escala=3x output=288x195
+
+Para registrar eventos de teclas, acrescente [log] ao nome do JAR. A ausência
+de exceções no registro não garante que um jogo seja compatível.
+
+Projeto original: https://github.com/pthalin/bittboy-j2me

@@ -61,17 +61,88 @@ public class DirectGraphicsImpl
 
     public void drawPixels(short pixels[], boolean transparency, int offset, int scanlength, int x, int y, int width, int height, int manipulation, int format)
     {
-        //System.out.println("drawPixels(short) not implemented");
+        if (pixels == null) throw new NullPointerException();
+        if (width < 0 || height < 0) throw new IllegalArgumentException();
+        if (width == 0 || height == 0) return;
+        int[] argb = new int[width * height];
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                int p = pixels[offset + row * scanlength + col] & 0xffff;
+                int r, g, b, a = 255;
+                switch (format) {
+                case TYPE_USHORT_565_RGB:
+                    r = ((p >> 11) & 31) * 255 / 31; g = ((p >> 5) & 63) * 255 / 63; b = (p & 31) * 255 / 31; break;
+                case TYPE_USHORT_555_RGB:
+                case TYPE_USHORT_1555_ARGB:
+                    r = ((p >> 10) & 31) * 255 / 31; g = ((p >> 5) & 31) * 255 / 31; b = (p & 31) * 255 / 31;
+                    if (transparency && format == TYPE_USHORT_1555_ARGB) a = (p & 0x8000) == 0 ? 0 : 255; break;
+                case TYPE_USHORT_444_RGB:
+                case TYPE_USHORT_4444_ARGB:
+                    r = ((p >> 8) & 15) * 17; g = ((p >> 4) & 15) * 17; b = (p & 15) * 17;
+                    if (transparency && format == TYPE_USHORT_4444_ARGB) a = ((p >> 12) & 15) * 17; break;
+                default:
+                    System.out.println("[Nokia] drawPixels short formato nao suportado: " + format); return;
+                }
+                argb[row * width + col] = (a << 24) | (r << 16) | (g << 8) | b;
+            }
+        }
+        Image image = Image.createRGBImage(argb, width, height, true);
+        graphics.drawRegion(image, 0, 0, width, height,
+            nokiaManip2MIDP2Manip(manipulation), x, y, Graphics.TOP | Graphics.LEFT);
     }
     
     public void drawPixels(byte pixels[], byte transparencyMask[], int offset, int scanlength, int x, int y, int width, int height, int manipulation, int format)
     {
-        //System.out.println("drawPixels(byte) not implemented");
+        if (pixels == null) throw new NullPointerException();
+        if (width < 0 || height < 0 || offset < 0 || scanlength <= 0)
+            throw new IllegalArgumentException();
+        if (width == 0 || height == 0) return;
+        if (format != TYPE_BYTE_1_GRAY && format != TYPE_BYTE_1_GRAY_VERTICAL) {
+            System.out.println("[Nokia] drawPixels byte formato nao suportado: " + format);
+            return;
+        }
+        int[] argb = new int[width * height];
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                int index, bit;
+                if (format == TYPE_BYTE_1_GRAY) {
+                    int pos = offset + row * scanlength + col;
+                    index = pos / 8;
+                    bit = 7 - (pos % 8);
+                } else {
+                    int baseRow = offset / scanlength + row;
+                    index = (baseRow / 8) * scanlength + (offset % scanlength) + col;
+                    bit = baseRow % 8;
+                }
+                if (index < 0 || index >= pixels.length ||
+                    (transparencyMask != null && index >= transparencyMask.length))
+                    throw new ArrayIndexOutOfBoundsException();
+                int gray = ((pixels[index] >> bit) & 1) == 0 ? 255 : 0;
+                int alpha = transparencyMask == null || ((transparencyMask[index] >> bit) & 1) != 0 ? 0xff : 0;
+                argb[row * width + col] = (alpha << 24) | (gray << 16) | (gray << 8) | gray;
+            }
+        }
+        Image image = Image.createRGBImage(argb, width, height, true);
+        graphics.drawRegion(image, 0, 0, width, height,
+            nokiaManip2MIDP2Manip(manipulation), x, y, Graphics.TOP | Graphics.LEFT);
     }
     
     public void drawPixels(int pixels[], boolean transparency, int offset, int scanlength, int x, int y, int width, int height, int manipulation, int format)
     {
-        //System.out.println("drawPixels(int) not implemented");
+        if (pixels == null) throw new NullPointerException();
+        if (width < 0 || height < 0) throw new IllegalArgumentException();
+        if (width == 0 || height == 0) return;
+        if (format != TYPE_INT_888_RGB && format != TYPE_INT_8888_ARGB) {
+            System.out.println("[Nokia] drawPixels int formato nao suportado: " + format); return;
+        }
+        int[] argb = new int[width * height];
+        for (int row = 0; row < height; row++) for (int col = 0; col < width; col++) {
+            int p = pixels[offset + row * scanlength + col];
+            argb[row * width + col] = transparency && format == TYPE_INT_8888_ARGB ? p : p | 0xff000000;
+        }
+        Image image = Image.createRGBImage(argb, width, height, true);
+        graphics.drawRegion(image, 0, 0, width, height,
+            nokiaManip2MIDP2Manip(manipulation), x, y, Graphics.TOP | Graphics.LEFT);
     }
 
     public void drawPolygon(int xPoints[], int xOffset, int yPoints[], int yOffset, int nPoints, int argbColor)
@@ -106,7 +177,7 @@ public class DirectGraphicsImpl
         int color = graphics.getColor();
         graphics.setColor(argbColor);
         
-        for(int i = 1; i < nPoints - 2; i++)
+        for(int i = 1; i < nPoints - 1; i++)
         {
             graphics.fillTriangle(xPoints[xOffset],
                                   yPoints[yOffset],

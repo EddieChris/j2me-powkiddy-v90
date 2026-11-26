@@ -35,6 +35,7 @@ import sdljava.event.SDLMouseButtonEvent;
 import sdljava.event.SDLMouseMotionEvent;
 import sdljava.event.SDLQuitEvent;
 import sdljava.video.SDLSurface;
+import sdljava.video.SDLRect;
 import sdljava.video.SDLVideo;
 import sdljava.x.swig.SDLPressedState;
 
@@ -46,10 +47,13 @@ public class SDLBackend implements UIBackend {
     public static final int BITS_PER_PIXEL_32 = 32;
     public static final int BITS_PER_PIXEL_16 = 16;
 
+    private static final boolean NUMERIC_DPAD = "numerico".equals(System.getProperty("j2me.direcional"));
+    private static final boolean LOG_KEYS = "1".equals(System.getProperty("j2me.logkeys"));
     private SDLSurface screenSurface;
     private SDLSurface rootARGBSurface;
     private SDLEventThread eventThread;
 
+    private int[] scaledPixels;
     private int canvasWidth;
     private int canvasHeight;
     private int bitsPerPixel;
@@ -86,18 +90,44 @@ public class SDLBackend implements UIBackend {
     public void updateARGBPixels(int[] argbPixels, int x, int y, int widht, int heigth) {
 
         // Draw rgb field on the surface
-        rootARGBSurface.setPixelData32(argbPixels);
+        if (scaledPixels != null) {
+            scale96x65(argbPixels, scaledPixels);
+            rootARGBSurface.setPixelData32(scaledPixels);
+        } else {
+            rootARGBSurface.setPixelData32(argbPixels);
+        }
 
         if (Logging.TRACE_ENABLED)
             System.out.println("[DEBUG] Toolkit.refresh(): x=" + x + " y=" + y + " widht=" + widht + " heigth=" + heigth);
 
         try {
-            rootARGBSurface.blitSurface(screenSurface);
-            screenSurface.updateRect(x, y, widht, heigth);
+            // The LCD is always 320x240; keep small phone screens centered.
+            int outputWidth = scaledPixels != null ? 288 : canvasWidth;
+            int outputHeight = scaledPixels != null ? 195 : canvasHeight;
+            int dstX = Math.max(0, (320 - outputWidth) / 2);
+            int dstY = Math.max(0, (240 - outputHeight) / 2);
+            rootARGBSurface.blitSurface(screenSurface, new SDLRect(dstX, dstY));
+            screenSurface.updateRect();
         } catch (SDLException e) {
             e.printStackTrace();
         }
 
+    }
+
+    public static void scale96x65(int[] source, int[] target) {
+        for (int y = 0; y < 65; y++) {
+            int srcRow = y * 96;
+            int dstRow = y * 3 * 288;
+            for (int x = 0; x < 96; x++) {
+                int pixel = source[srcRow + x];
+                int p = dstRow + x * 3;
+                target[p] = pixel;
+                target[p + 1] = pixel;
+                target[p + 2] = pixel;
+            }
+            System.arraycopy(target, dstRow, target, dstRow + 288, 288);
+            System.arraycopy(target, dstRow, target, dstRow + 576, 288);
+        }
     }
 
     public int getWidth() {
@@ -120,8 +150,19 @@ public class SDLBackend implements UIBackend {
         try {
             SDLMain.init(SDLMain.SDL_INIT_VIDEO);
             SDLVideo.showCursor(SDLVideo.SDL_DISABLE);
-            screenSurface = SDLVideo.setVideoMode(canvasWidth, canvasHeight, bitsPerPixel, flags);
-            rootARGBSurface = SDLVideo.createRGBSurface(SDLVideo.SDL_SWSURFACE, canvasWidth, canvasHeight, 32, 0x00ff0000L, 0x0000ff00L,
+            screenSurface = SDLVideo.setVideoMode(320, 240, bitsPerPixel, flags);
+            screenSurface.fillRect(0);
+            System.out.println("[V90 video] MIDlet=" + canvasWidth + "x" + canvasHeight
+                + " SDL=" + screenSurface.getWidth() + "x" + screenSurface.getHeight());
+            int outputWidth = canvasWidth;
+            int outputHeight = canvasHeight;
+            if (canvasWidth == 96 && canvasHeight == 65) {
+                outputWidth = 288;
+                outputHeight = 195;
+                scaledPixels = new int[outputWidth * outputHeight];
+                System.out.println("[V90 video] escala=3x output=288x195");
+            }
+            rootARGBSurface = SDLVideo.createRGBSurface(SDLVideo.SDL_SWSURFACE, outputWidth, outputHeight, 32, 0x00ff0000L, 0x0000ff00L,
                 0x000000ffL, 0xff000000L);
             if (Logging.TRACE_ENABLED)
                 System.out.println("[DEBUG] Toolkit.initialize(): VideoSurface: " + rootARGBSurface);
@@ -210,6 +251,7 @@ public class SDLBackend implements UIBackend {
             int keyCode = event.getSym();
             int unicode = KeyConstants.CHAR_UNDEFINED;
 	    int keyType = convertKeyCodeBittboy(keyCode);
+            if (LOG_KEYS) System.out.println("[V90 tecla] SDL=" + keyCode + " tipo=" + keyType + " char=" + (int)convertKeyCodeBittboyUnicode(keyCode) + " estado=" + event.getState());
 
             if (keyCode == SDLKey.SDLK_RCTRL) {
  	        System.out.println("[EXIT] User forced exit");
@@ -235,57 +277,42 @@ public class SDLBackend implements UIBackend {
     }
 
     public static int convertKeyCodeBittboy(int keyCode) {
-	    switch (keyCode) {
-	    case SDLKey.SDLK_UP:
-		return KeyConstants.VK_UP;
-       	    case SDLKey.SDLK_DOWN:
-		return KeyConstants.VK_DOWN;
-	    case SDLKey.SDLK_RIGHT:
-		return KeyConstants.VK_RIGHT;
-	    case SDLKey.SDLK_LEFT:
-		return KeyConstants.VK_LEFT;
-	    case SDLKey.SDLK_ESCAPE:
-		return -6;
-	    case SDLKey.SDLK_LSHIFT:
-		return KeyConstants.VK_1;
-	    case SDLKey.SDLK_LALT:
-		return KeyConstants.VK_7;
-	    case SDLKey.SDLK_SPACE:
-		return KeyConstants.VK_3;
-	    case SDLKey.SDLK_LCTRL:
-		return KeyConstants.VK_5;
-	    case SDLKey.SDLK_RETURN:
-		return -7;
-	    //case SDLKey.SDLK_RCTRL:
-              //return KeyConstants.VK_0;
-	    default:
-		return KeyConstants.VK_UNDEFINED;
-	    }
+        switch (keyCode) {
+        case SDLKey.SDLK_UP: return NUMERIC_DPAD ? KeyConstants.VK_2 : KeyConstants.VK_UP;
+        case SDLKey.SDLK_DOWN: return NUMERIC_DPAD ? KeyConstants.VK_8 : KeyConstants.VK_DOWN;
+        case SDLKey.SDLK_LEFT: return NUMERIC_DPAD ? KeyConstants.VK_4 : KeyConstants.VK_LEFT;
+        case SDLKey.SDLK_RIGHT: return NUMERIC_DPAD ? KeyConstants.VK_6 : KeyConstants.VK_RIGHT;
+        case SDLKey.SDLK_ESCAPE: return -6;
+        case SDLKey.SDLK_RETURN: return -7;
+        case SDLKey.SDLK_SPACE: return KeyConstants.VK_5; // Y
+        case SDLKey.SDLK_LCTRL: return KeyConstants.VK_0; // B
+        case SDLKey.SDLK_LSHIFT: return KeyConstants.VK_ASTERISK; // X
+        case SDLKey.SDLK_LALT: return KeyConstants.VK_NUMBER_SIGN; // A
+        case SDLKey.SDLK_TAB: return KeyConstants.VK_1; // L1
+        case SDLKey.SDLK_BACKSPACE: return KeyConstants.VK_3; // R1
+        case SDLKey.SDLK_RALT: return KeyConstants.VK_7; // L2, patched 1.3.3
+        case SDLKey.SDLK_RSHIFT: return KeyConstants.VK_9; // R2, patched 1.3.3
+        default: return KeyConstants.VK_UNDEFINED;
+        }
     }
     public static int convertKeyCodeBittboyUnicode(int keyCode) {
-	    switch (keyCode) {
-	    case SDLKey.SDLK_UP:
-       	    case SDLKey.SDLK_DOWN:
-	    case SDLKey.SDLK_RIGHT:
-	    case SDLKey.SDLK_LEFT:
-	    case SDLKey.SDLK_ESCAPE:
-	    case SDLKey.SDLK_RETURN:
-		return KeyConstants.CHAR_UNDEFINED;
-	    case SDLKey.SDLK_LSHIFT:
-		return '1';
-	    case SDLKey.SDLK_LALT:
-		return '7';
-	    case SDLKey.SDLK_SPACE:
-		return '3';
-	    case SDLKey.SDLK_LCTRL:
-		return '5';
-	    //case SDLKey.SDLK_RCTRL:
-		//return '0';
-	    default:
-		return KeyConstants.CHAR_UNDEFINED;
-	    }
+        switch (keyCode) {
+        case SDLKey.SDLK_UP: return NUMERIC_DPAD ? '2' : KeyConstants.CHAR_UNDEFINED;
+        case SDLKey.SDLK_DOWN: return NUMERIC_DPAD ? '8' : KeyConstants.CHAR_UNDEFINED;
+        case SDLKey.SDLK_LEFT: return NUMERIC_DPAD ? '4' : KeyConstants.CHAR_UNDEFINED;
+        case SDLKey.SDLK_RIGHT: return NUMERIC_DPAD ? '6' : KeyConstants.CHAR_UNDEFINED;
+        case SDLKey.SDLK_SPACE: return '5';
+        case SDLKey.SDLK_LCTRL: return '0';
+        case SDLKey.SDLK_LSHIFT: return '*';
+        case SDLKey.SDLK_LALT: return '#';
+        case SDLKey.SDLK_TAB: return '1';
+        case SDLKey.SDLK_BACKSPACE: return '3';
+        case SDLKey.SDLK_RALT: return '7';
+        case SDLKey.SDLK_RSHIFT: return '9';
+        default: return KeyConstants.CHAR_UNDEFINED;
+        }
     }
-    
+
     public static int convertKeyCode(int keyCode) {
 
         switch (keyCode) {

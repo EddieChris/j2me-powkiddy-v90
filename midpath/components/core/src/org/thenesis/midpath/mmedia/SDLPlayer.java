@@ -45,11 +45,15 @@ public abstract class SDLPlayer extends BasicPlayer{
 		public void run() {
 			
 			try {
+                // Allow BasicPlayer.start() to finish setting STARTED before
+                // the checker reports a very short sound's end.
+                Thread.sleep(20);
 				while(running) {
-					if(isEndOfMediaReached()) {
-						sendEvent(PlayerListener.END_OF_MEDIA, new Long(-1));
-						state = PREFETCHED;
+					if(isEndOfMediaReached() && running) {
 						running = false;
+                        // BasicPlayer's event dispatcher owns the state change
+                        // and loop handling; changing state here skips looping.
+						sendEvent(PlayerListener.END_OF_MEDIA, new Long(-1));
 						break;
 					}
 					Thread.sleep(50);

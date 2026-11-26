@@ -59,7 +59,7 @@ public class MIDletLauncher {
 				if (infos.length == 0) {
 					throw new Exception("No MIDlet was found in the jar (corrupted /META-INF/MANIFEST file ?)");
 				} else if (infos.length == 1) {
-					launchAndClose(infos[0].classname, infos[0].name);
+					launchJarAndClose(infos[0]);
 				} else {
 					launchMIDletWithChooserAndClose();
 				}
@@ -75,6 +75,22 @@ public class MIDletLauncher {
 		}
 	}
 	
+	void launchJarAndClose(MIDletInfo info) throws Exception {
+		String suiteName = jarInspector.getSuiteName();
+		if (suiteName == null || suiteName.length() == 0) {
+			suiteName = info.name;
+		}
+		String suiteId = "0"; // Preserve the original single-MIDlet storage ID.
+		MIDletSuite suite = InternalMIDletSuiteImpl.create(
+				jarInspector.getManifestProperties(), suiteName, suiteId);
+		BaseMIDletSuiteLauncher.initialize();
+		try {
+			BaseMIDletSuiteLauncher.launch(suite, info.classname);
+		} finally {
+			BaseMIDletSuiteLauncher.close();
+		}
+	}
+
 	void launchMIDletWithChooserAndClose() throws Exception {
 		// Initialize the chooser MIDlet
 		BaseMIDletSuiteLauncher.initialize();

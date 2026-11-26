@@ -765,24 +765,11 @@ public final class Manager {
 			// ... try and instantiate the handler ...
 			Class handlerClass = Class.forName(className);
 
-			Iterator it = players.iterator();
-			p = null;
-			while (it.hasNext()) {
-				Object o = it.next();
-				if (o.getClass() == handlerClass) {
-					p = (BasicPlayer) o;
-					if (p.getState() == BasicPlayer.CLOSED) {
-						p = null;
-						it.remove();
-						if (DEBUG) System.out.println("Removed closed Player");
-					}
-				}
-			}
-			if (p == null) {
-				p = (BasicPlayer) handlerClass.newInstance();
-				players.add(p);
-				if (DEBUG) System.out.println("Added Player");
-			}
+			// Each input stream is a different media source and requires a fresh
+			// player. Reusing a realized player retains its previous native music.
+			p = (BasicPlayer) handlerClass.newInstance();
+			System.out.println("[J2ME som] Novo player=" + p.hashCode() + " tipo=" + type);
+
 		} catch (Exception e) {
 			if (DEBUG) System.out.println("Class not found " + className);
 			e.printStackTrace();
