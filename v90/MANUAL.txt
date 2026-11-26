@@ -1,5 +1,4 @@
 BITTBOY J2ME — POWKIDDY V90
-Manual atualizado em 25/11/2026
 
 DESCRIÇÃO
 
@@ -47,7 +46,7 @@ converte um jogo para outra resolução. Sem resolução reconhecida, o padrão 
 176x221.
 
 Jogos 96x65 são ampliados 3x para 288x195 e centralizados na tela do V90.
-O reconhecimento de 320x240 pelo nome está disponível, mas a exibição nessa
+O reconhecimento de 240x320 pelo nome está disponível, mas a exibição nessa
 resolução ainda precisa de confirmação no console.
 
 Opcionalmente, crie ao lado do JAR um arquivo com o mesmo nome acrescido de
@@ -85,10 +84,6 @@ substituí-los. Os componentes principais ficam nos seguintes caminhos:
 
   emus/bittboy-j2me/dist/nokia.jar — APIs e sons Nokia.
 
-A correção pontual para linhas desenhadas além da borda, destinada a evitar
-uma exceção observada no Medieval Combat, está em versão experimental e ainda
-precisa ser testada no V90. Uma atualização dos arquivos individuais exige
-que o restante da instalação completa já esteja presente.
 
 REGISTROS E DIAGNÓSTICO
 
