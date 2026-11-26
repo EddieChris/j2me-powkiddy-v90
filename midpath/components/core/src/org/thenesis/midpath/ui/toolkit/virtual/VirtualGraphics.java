@@ -34,6 +34,7 @@ public class VirtualGraphics extends Graphics {
 	public static final int MAX_ELLIPSE_RADIUS = 16384;
 
 	Rectangle clipRectangle = new Rectangle();
+	private final Rectangle lineClip = new Rectangle();
 	private int internalColor;
 
 	VirtualGraphics(VirtualSurface surface) {
@@ -141,7 +142,7 @@ public class VirtualGraphics extends Graphics {
 			x0 = x1;
 			x1 = t;
 		}
-		if ((y < r.ymin) || (y > r.ymax) || (x1 < r.xmin) || (x0 > r.xmax))
+		if ((y < r.ymin) || (y >= r.ymax) || (x1 < r.xmin) || (x0 >= r.xmax))
 			return;
 		if (x0 < r.xmin)
 			x0 = r.xmin;
@@ -163,7 +164,7 @@ public class VirtualGraphics extends Graphics {
 			y0 = y1;
 			y1 = t;
 		}
-		if ((x < r.xmin) || (x > r.xmax) || (y1 < r.ymin) || (y0 > r.ymax))
+		if ((x < r.xmin) || (x >= r.xmax) || (y1 < r.ymin) || (y0 >= r.ymax))
 			return;
 		if (y0 < r.ymin)
 			y0 = r.ymin;
@@ -206,7 +207,9 @@ public class VirtualGraphics extends Graphics {
 		sl.y0 = y0 + transY;
 		sl.y1 = y1 + transY;
 
-		if (clipLine(clipRectangle, sl, dl))
+		if (clipRectangle.xmin >= clipRectangle.xmax || clipRectangle.ymin >= clipRectangle.ymax) return;
+		lineClip.set(clipRectangle.xmin, clipRectangle.ymin, clipRectangle.xmax - 1, clipRectangle.ymax - 1);
+		if (clipLine(lineClip, sl, dl))
 			return;
 
 		// Draw.
@@ -237,7 +240,8 @@ public class VirtualGraphics extends Graphics {
 				if (lastPixelFlag)
 					w++;
 				while (w > 0) {
-					drawSpan(surface.data, y * surface.width + x, 1);
+					if (x >= clipRectangle.xmin && x < clipRectangle.xmax && y >= clipRectangle.ymin && y < clipRectangle.ymax)
+						drawSpan(surface.data, y * surface.width + x, 1);
 					if (decision >= 0) {
 						decision -= dx;
 						y += sy;
@@ -255,7 +259,8 @@ public class VirtualGraphics extends Graphics {
 				if (lastPixelFlag)
 					h++;
 				while (h > 0) {
-					drawSpan(surface.data, y * surface.width + x, 1);
+					if (x >= clipRectangle.xmin && x < clipRectangle.xmax && y >= clipRectangle.ymin && y < clipRectangle.ymax)
+						drawSpan(surface.data, y * surface.width + x, 1);
 					if (decision >= 0) {
 						decision -= dy;
 						x += sx;

@@ -578,7 +578,22 @@ class FormLFImpl extends ScreenLFImpl implements FormLF {
      *
      * @param keyCode the key code of the key which was pressed
      */
+    // Numeric controls in 96x65 profiles must also navigate MIDP List screens.
+    // Limit this translation to List so TextBox and Form numeric entry is unchanged.
+    private int listNavigationKey(int keyCode) {
+        if (!(owner instanceof List)) return keyCode;
+        switch (keyCode) {
+        case '2': return Constants.KEYCODE_UP;
+        case '8': return Constants.KEYCODE_DOWN;
+        case '4': return Constants.KEYCODE_LEFT;
+        case '6': return Constants.KEYCODE_RIGHT;
+        case '5': return Constants.KEYCODE_SELECT;
+        default: return keyCode;
+        }
+    }
+
     void uCallKeyPressed(int keyCode) {
+        keyCode = listNavigationKey(keyCode);
         if (keyCode == Constants.KEYCODE_UP
             || keyCode == Constants.KEYCODE_DOWN
             || keyCode == Constants.KEYCODE_LEFT
@@ -626,6 +641,7 @@ class FormLFImpl extends ScreenLFImpl implements FormLF {
      * @param keyCode the key which was released
      */
     void uCallKeyReleased(int keyCode) {
+        keyCode = listNavigationKey(keyCode);
         if (keyCode == Constants.KEYCODE_UP
             || keyCode == Constants.KEYCODE_DOWN
             || keyCode == Constants.KEYCODE_LEFT
@@ -659,6 +675,7 @@ class FormLFImpl extends ScreenLFImpl implements FormLF {
      * @param keyCode the key code of the key which was repeated
      */
     void uCallKeyRepeated(int keyCode) {
+        keyCode = listNavigationKey(keyCode);
         if (keyCode == Constants.KEYCODE_UP
             || keyCode == Constants.KEYCODE_DOWN
             || keyCode == Constants.KEYCODE_LEFT

@@ -858,6 +858,7 @@ public final class PngImage implements ImageProducer {
 				break;
 			}
 			
+			if (chunk == null) return new Chunk(type);
 			registerChunk(chunk);
 			return getRegisteredChunk(type);
 			

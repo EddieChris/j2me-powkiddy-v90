@@ -4,6 +4,8 @@ package com.nokia.mid.ui;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
+import org.thenesis.midpath.ui.toolkit.virtual.VirtualGraphics;
+import org.thenesis.midpath.ui.toolkit.virtual.VirtualSurface;
 
 
 /**
@@ -215,7 +217,28 @@ public class DirectGraphicsImpl
 
     public void getPixels(short pixels[], int offset, int scanlength, int x, int y, int width, int height, int format)
     {
-        //System.out.println("getPixels(short) not implemented");
+        // Games such as Block Breaker use 4444 to capture the screen as a background.
+        // Preserve the previous behavior for other formats, which remain unsupported.
+        if (format != TYPE_USHORT_4444_ARGB) return;
+        if (pixels == null) throw new NullPointerException();
+        if (width < 0 || height < 0) throw new IllegalArgumentException();
+        if (!(graphics instanceof VirtualGraphics)) throw new IllegalStateException("getPixels requires virtual graphics");
+        VirtualSurface surface = ((VirtualGraphics) graphics).getSurface();
+        long sx = (long)x + graphics.getTranslateX();
+        long sy = (long)y + graphics.getTranslateY();
+        if (sx < 0 || sy < 0 || sx + width > surface.width || sy + height > surface.height)
+            throw new IllegalArgumentException("getPixels region outside surface");
+        if (width == 0 || height == 0) return;
+        long last = (long)offset + (long)(height - 1) * scanlength;
+        if (Math.min((long)offset, last) < 0 || Math.max((long)offset, last) + width > pixels.length)
+            throw new ArrayIndexOutOfBoundsException();
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                int argb = surface.data[((int)sy + row) * surface.width + (int)sx + col];
+                pixels[offset + row * scanlength + col] = (short)(((argb >>> 16) & 0xf000)
+                    | ((argb >>> 12) & 0x0f00) | ((argb >>> 8) & 0x00f0) | ((argb >>> 4) & 0x000f));
+            }
+        }
     }
 
     public void getPixels(byte[] pixels, byte[] transparencyMask, int offset, int scanlength, int x, int y, int width, int height, int format)

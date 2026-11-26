@@ -76,6 +76,10 @@ if [ "$1" = "-jar" ] && [ "$WIDTH" = 96 ] && [ "$HEIGHT" = 65 ]; then
   case "${2##*/}" in *'[setas]'*|*'[SETAS]'*) DPAD=setas ;; esac
 fi
 case "$2" in *'[log]'*|*'[LOG]'*) LOGKEYS=1 ;; esac
+MAXFPS=0
+if [ "$LOG_TIPO" = "JAR" ]; then
+  case "${LOG_ARQUIVO##*/}" in *15\ [fF][pP][sS]*) MAXFPS=15 ;; esac
+fi
 JLP=$MIDPATH_HOME/dist
 CLASS=org.thenesis.midpath.main.MIDletLauncherSE
 # Identificar cada execução nos dois arquivos, preservando registros anteriores.
@@ -87,13 +91,14 @@ log_header() {
     printf 'Classe MIDlet: %s\n' "$LOG_CLASSE"
   fi
   printf 'Resolução selecionada: %sx%s\n' "$WIDTH" "$HEIGHT"
+  if [ "$MAXFPS" = 15 ]; then printf 'Limite de apresentação: 15 FPS\n'; fi
   printf '%s\n\n' '=== Registro da execução ==='
 }
 # Preserve cada argumento, inclusive caminhos com espaços.
 {
   log_header
   log_header >&2
-  exec "$JAVA_CMD" "-Dsun.boot.library.path=$JLP" "-Dj2me.direcional=$DPAD" "-Dj2me.logkeys=$LOGKEYS" \
+  exec "$JAVA_CMD" "-Dsun.boot.library.path=$JLP" "-Dj2me.direcional=$DPAD" "-Dj2me.logkeys=$LOGKEYS" "-Dj2me.maxfps=$MAXFPS" \
   "-Djavax.microedition.lcdui.screenWidth=$WIDTH" \
   "-Djavax.microedition.lcdui.screenHeight=$HEIGHT" \
   "-Xbootclasspath/p:$CP" -Xmx10M "$CLASS" "$@"

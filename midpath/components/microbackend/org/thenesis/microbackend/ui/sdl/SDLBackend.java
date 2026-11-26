@@ -48,6 +48,8 @@ public class SDLBackend implements UIBackend {
     public static final int BITS_PER_PIXEL_16 = 16;
 
     private static final boolean NUMERIC_DPAD = "numerico".equals(System.getProperty("j2me.direcional"));
+    private static final boolean LIMIT_FPS_15 = "15".equals(System.getProperty("j2me.maxfps"));
+    private long lastFrameMillis = -1;
     private static final boolean LOG_KEYS = "1".equals(System.getProperty("j2me.logkeys"));
     private SDLSurface screenSurface;
     private SDLSurface rootARGBSurface;
@@ -87,7 +89,25 @@ public class SDLBackend implements UIBackend {
         this.listener = listener;
     }
 
+    // Limit presentation on the rendering thread; games with independent
+    // simulation timers may retain their original speed.
+    private void paceFrame() {
+        if (!LIMIT_FPS_15) return;
+        long now = System.currentTimeMillis();
+        if (lastFrameMillis >= 0 && now >= lastFrameMillis) {
+            long left = 67 - (now - lastFrameMillis);
+            while (left > 0) {
+                try { Thread.sleep(left); } catch (InterruptedException e) { return; }
+                now = System.currentTimeMillis();
+                if (now < lastFrameMillis) break;
+                left = 67 - (now - lastFrameMillis);
+            }
+        }
+        lastFrameMillis = System.currentTimeMillis();
+    }
+
     public void updateARGBPixels(int[] argbPixels, int x, int y, int widht, int heigth) {
+        paceFrame();
 
         // Draw rgb field on the surface
         if (scaledPixels != null) {
@@ -145,6 +165,7 @@ public class SDLBackend implements UIBackend {
 
     public void open() throws IOException {
 
+        if (LIMIT_FPS_15) System.out.println("[V90 video] limite de apresentacao=15 FPS");
         long flags = videoMode.equalsIgnoreCase("HW") ? SDLVideo.SDL_HWSURFACE : SDLVideo.SDL_SWSURFACE;
 
         try {

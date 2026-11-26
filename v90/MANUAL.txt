@@ -27,6 +27,8 @@ Nos jogos com perfil 96x65, o direcional envia os números 2, 8, 4 e 6
 Para forçar o uso de setas em um jogo 96x65, acrescente [setas] ao nome do
 arquivo JAR.
 
+Nas listas Java padrão, o direcional navega pelas opções e Y pode selecioná-las.
+
 O funcionamento de L2 e R2 depende do zImage instalado no console: pode ser
 necessária uma versão que habilite esses botões. A função das teclas pode
 variar conforme o jogo.
@@ -53,6 +55,14 @@ Opcionalmente, crie ao lado do JAR um arquivo com o mesmo nome acrescido de
 .res, por exemplo "Meu jogo.jar.res", contendo apenas 96x65 ou outra das
 resoluções aceitas. Esse arquivo tem prioridade sobre a resolução no nome.
 Remova ou corrija o .res para voltar a escolher a resolução pelo nome do JAR.
+
+LIMITE DE 15 FPS
+
+Para limitar a apresentação de quadros, inclua "15 FPS" no nome do JAR,
+por exemplo "Meu jogo 96x65 15 FPS.jar". Remova o texto para desativar.
+A opção funciona nas resoluções reconhecidas. Em jogos com temporizador
+independente, o limite pode reduzir os quadros sem alterar a velocidade.
+Se existir um arquivo .jar.res, renomeie-o para acompanhar o nome do JAR.
 
 SOM E COMPATIBILIDADE
 
